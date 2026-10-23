@@ -6,6 +6,9 @@
 
 Serves CoMapeo project blobs (photos, audio, video) and category icons over HTTP, and renders icon SVGs to PNG at any requested size and pixel density using [resvg](https://github.com/linebender/resvg) through [`@comapeo/resvg`](https://www.npmjs.com/package/@comapeo/resvg).
 
+> [!NOTE]
+> This is an unpublished prototype. It isn't on npm yet, and its API may change before the first release. The rollout plan is in [#1](https://github.com/digidem/comapeo-media-server/issues/1).
+
 ## Installation
 
 ```sh
