@@ -147,7 +147,8 @@ async function setup(t: TestContext) {
 
 	t.after(async () => {
 		await server.close()
-		await project.close()
+		// Closes the project and client.db, which Windows won't delete while open
+		await manager.close()
 		await fs.rm(dir, { recursive: true, force: true })
 	})
 	return { project, projectId, serverOrigin, dir, blobStreams }

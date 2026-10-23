@@ -30,7 +30,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: [22, 24, 26]
+        # Node 26 waits on @comapeo/core moving off better-sqlite3 11, which doesn't build on it
+        node: [22, 24]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
