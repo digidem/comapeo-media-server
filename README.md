@@ -80,3 +80,5 @@ The error classes are made with [custom-error-creator](https://github.com/digide
 ## License
 
 MIT
+
+The reference renders in `test/fixtures/renders/` are of the icons in [comapeo-default-categories](https://github.com/digidem/comapeo-default-categories), licensed CC BY-NC 4.0. They are not included in the npm package.
