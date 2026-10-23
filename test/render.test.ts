@@ -1,25 +1,23 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 import { promisify } from 'node:util'
 
+import { PNG } from 'pngjs'
+
 import { DENSITIES, readDefaultIcons, SIZES } from './default-icons.ts'
 import { iconUrl, stubServer } from './helpers.ts'
 
 const execFileAsync = promisify(execFile)
 
-const expectedHashes: Record<string, string> = JSON.parse(
-	await fs.readFile(
-		new URL('./fixtures/render-hashes.json', import.meta.url),
-		'utf8',
-	),
-)
+// resvg builds for different platforms differ by a few anti-aliased edge pixels
+// (a mean of about 0.1 levels at worst); a different icon differs by about 90.
+const MAX_MEAN_CHANNEL_DIFF = 1
 
-test('default icons render to the committed hashes', async () => {
+test('default icons render like the committed macOS renders', async () => {
 	const icons = await readDefaultIcons()
 	assert.equal(icons.size, 26)
 	let svg: Buffer
@@ -31,7 +29,6 @@ test('default icons render to the committed hashes', async () => {
 		}),
 	})
 	const mismatches: string[] = []
-	let count = 0
 	for (const [name, iconSvg] of icons) {
 		svg = iconSvg
 		for (const size of SIZES) {
@@ -41,17 +38,30 @@ test('default icons render to the committed hashes', async () => {
 					new Request(iconUrl(`${size}@${density}x.png`)),
 				)
 				assert.equal(res.status, 200, key)
-				const hash = createHash('sha256')
-					.update(new Uint8Array(await res.arrayBuffer()))
-					.digest('hex')
-				if (hash !== expectedHashes[key]) mismatches.push(key)
-				count++
+				const actual = PNG.sync.read(Buffer.from(await res.arrayBuffer()))
+				const expected = PNG.sync.read(
+					await fs.readFile(
+						new URL(`./fixtures/renders/${key}.png`, import.meta.url),
+					),
+				)
+				const diff = meanChannelDiff(actual, expected)
+				if (diff > MAX_MEAN_CHANNEL_DIFF) {
+					mismatches.push(`${key} (mean diff ${diff.toFixed(2)})`)
+				}
 			}
 		}
 	}
-	assert.equal(count, Object.keys(expectedHashes).length)
 	assert.deepEqual(mismatches, [])
 })
+
+function meanChannelDiff(a: PNG, b: PNG) {
+	if (a.width !== b.width || a.height !== b.height) return Infinity
+	let sum = 0
+	for (let i = 0; i < a.data.length; i++) {
+		sum += Math.abs(a.data[i] - b.data[i])
+	}
+	return sum / a.data.length
+}
 
 test('the server fails to load when the resvg binding is missing', async (t) => {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'media-server-'))
